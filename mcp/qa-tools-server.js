@@ -29,12 +29,17 @@ server.registerTool(
   'api_request',
   {
     title: 'Call the MultiDesk REST API',
-    description: 'Sends a request to the MultiDesk API as a given tenant and returns the HTTP status and JSON body.',
+    description:
+      'Sends a request to the MultiDesk API as a given tenant and user and returns the HTTP status and JSON body.',
     inputSchema: {
       method: z.enum(['GET', 'POST', 'PATCH']).default('GET'),
       path: z.string().describe('API path starting with /api/, e.g. /api/tickets?status=open'),
       tenant: z.string().optional().describe('Tenant id sent as the X-Tenant header, e.g. acme or globex'),
       body: z.record(z.string(), z.unknown()).optional().describe('JSON body for POST or PATCH'),
+      user: z
+        .enum(['admin', 'support1', 'anonymous'])
+        .default('admin')
+        .describe('Seed user to log in as before the request; anonymous sends no session'),
     },
   },
   safely((args) => apiRequest(BASE_URL, args)),
@@ -45,7 +50,7 @@ server.registerTool(
   {
     title: 'Query the MultiDesk database (read-only)',
     description:
-      'Runs one read-only SELECT against the SQLite database. Tables: tenants, tenant_settings, tickets. Use ? placeholders with params.',
+      'Runs one read-only SELECT against the SQLite database. Tables: tenants, tenant_settings, tickets, users. Use ? placeholders with params.',
     inputSchema: {
       sql: z.string().describe('A single SELECT statement'),
       params: z.array(z.union([z.string(), z.number()])).default([]),

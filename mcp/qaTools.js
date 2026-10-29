@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import Database from 'better-sqlite3';
+import { SEED_USERS } from '../src/db/seed.js';
 
 export const MAX_ROWS = 200;
 const ALLOWED_METHODS = ['GET', 'POST', 'PATCH'];
@@ -72,7 +73,33 @@ export function getTenantConfig(dbPath, tenantId) {
   }
 }
 
-export async function apiRequest(baseUrl, { method = 'GET', path, tenant, body }) {
+async function send(url, init) {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } catch (error) {
+    throw new Error(`Could not reach ${url.origin} (${error.message}). Is the app running?`, { cause: error });
+  }
+}
+
+/** Logs in as one of the seed users and returns the session cookie. */
+async function login(baseUrl, username) {
+  const user = SEED_USERS.find((u) => u.username === username);
+  if (!user) {
+    throw new Error(`Unknown user "${username}". Use one of: ${SEED_USERS.map((u) => u.username).join(', ')}, anonymous`);
+  }
+  const response = await send(new URL('/api/login', baseUrl), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: user.username, password: user.password }),
+  });
+  if (!response.ok) {
+    throw new Error(`Login as "${username}" failed with ${response.status}`);
+  }
+  return response.headers.get('set-cookie').split(';')[0];
+}
+
+/** Calls the API as a seed user (admin by default), or with no session when user is "anonymous". */
+export async function apiRequest(baseUrl, { method = 'GET', path, tenant, body, user = 'admin' }) {
   const verb = method.toUpperCase();
   if (!ALLOWED_METHODS.includes(verb)) {
     throw new Error(`Method must be one of: ${ALLOWED_METHODS.join(', ')}`);
@@ -87,20 +114,15 @@ export async function apiRequest(baseUrl, { method = 'GET', path, tenant, body }
   }
 
   const headers = { Accept: 'application/json' };
+  if (user !== 'anonymous') headers.Cookie = await login(baseUrl, user);
   if (tenant) headers['X-Tenant'] = tenant;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  let response;
-  try {
-    response = await fetch(url, {
-      method: verb,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (error) {
-    throw new Error(`Could not reach ${url.origin} (${error.message}). Is the app running?`, { cause: error });
-  }
+  const response = await send(url, {
+    method: verb,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
 
   const text = await response.text();
   let parsed;
