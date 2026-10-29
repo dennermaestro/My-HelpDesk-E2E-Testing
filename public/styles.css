@@ -40,6 +40,18 @@ body {
 
 .brand { margin: 0; font-size: 1.25rem; }
 
+[hidden] { display: none !important; }
+
+.topbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+
+.current-user { color: var(--muted); font-size: 0.9rem; }
+
+.login-view { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+.login-panel { width: min(100%, 360px); }
+.login-panel .brand { margin-bottom: 8px; }
+
+.layout.single { grid-template-columns: minmax(260px, 480px); justify-content: center; }
+
 .tenant-picker { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 
 .layout {

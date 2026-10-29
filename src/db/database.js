@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import { ROLES } from '../auth.js';
 import { seedDatabase } from './seed.js';
 
 export const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
@@ -32,6 +33,14 @@ const SCHEMA = `
   );
 
   CREATE INDEX idx_tickets_tenant ON tickets (tenant_id);
+
+  CREATE TABLE users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE,
+    role          TEXT NOT NULL CHECK (role IN (${ROLES.map((r) => `'${r}'`).join(', ')})),
+    password_salt TEXT NOT NULL,
+    password_hash TEXT NOT NULL
+  );
 `;
 
 /**

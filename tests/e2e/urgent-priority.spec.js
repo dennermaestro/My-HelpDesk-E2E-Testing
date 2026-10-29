@@ -1,7 +1,6 @@
 // Regression for the "urgent priority" rollout.
 // It checks every client, not just the main one, across UI, API and database.
-import { expect, test } from '@playwright/test';
-import { createTicketViaUi, getSettings, openApp, readTicketFromDb, ticketCard, TENANTS, uniqueTitle } from './support.js';
+import { createTicketViaUi, expect, getSettings, openApp, readTicketFromDb, TENANTS, test, ticketCard, uniqueTitle } from './support.js';
 
 for (const tenant of TENANTS) {
   test.describe(`urgent priority for ${tenant}`, () => {

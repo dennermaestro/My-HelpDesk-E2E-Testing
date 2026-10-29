@@ -1,7 +1,6 @@
 // Regression for changing an existing ticket's priority to "urgent".
 // A client without the flag must get a clear error, and the stored priority must not change.
-import { expect, test } from '@playwright/test';
-import { getSettings, readTicketFromDb, TENANTS, uniqueTitle } from './support.js';
+import { expect, getSettings, readTicketFromDb, TENANTS, test, uniqueTitle } from './support.js';
 
 for (const tenant of TENANTS) {
   test.describe(`urgent priority update for ${tenant}`, () => {

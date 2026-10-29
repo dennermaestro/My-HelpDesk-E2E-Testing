@@ -1,5 +1,4 @@
-import { expect, test } from '@playwright/test';
-import { createTicketViaUi, openApp, ticketCard, uniqueTitle } from './support.js';
+import { createTicketViaUi, expect, openApp, test, ticketCard, uniqueTitle } from './support.js';
 
 test.describe('ticket workflow', () => {
   test('shows only the selected client\'s tickets', async ({ page }) => {

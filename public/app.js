@@ -9,6 +9,15 @@ const LABELS = {
 };
 
 const elements = {
+  loginView: document.querySelector('#login-view'),
+  loginForm: document.querySelector('#login-form'),
+  loginSubmit: document.querySelector('[data-testid="login-submit"]'),
+  loginError: document.querySelector('#login-error'),
+  appView: document.querySelector('#app-view'),
+  currentUser: document.querySelector('[data-testid="current-user"]'),
+  logoutButton: document.querySelector('[data-testid="logout-button"]'),
+  layout: document.querySelector('.layout'),
+  ticketsPanel: document.querySelector('#tickets-panel'),
   tenantSelect: document.querySelector('#tenant-select'),
   form: document.querySelector('#ticket-form'),
   prioritySelect: document.querySelector('[data-testid="ticket-priority"]'),
@@ -20,7 +29,10 @@ const elements = {
   template: document.querySelector('#ticket-template'),
 };
 
-const state = { tenant: null, demoDefects: false };
+const state = { tenant: null, demoDefects: false, user: null };
+
+// Mirrors the server's role rules only to decide what to show; the server enforces them.
+const canListTickets = () => state.user?.role === 'admin';
 
 async function api(path, { method = 'GET', body } = {}) {
   const headers = { Accept: 'application/json' };
@@ -33,6 +45,9 @@ async function api(path, { method = 'GET', body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await response.json().catch(() => ({}));
+  if (response.status === 401 && data.error?.code === 'AUTH_REQUIRED') {
+    showLogin();
+  }
   if (!response.ok) {
     throw new Error(data.error?.message ?? `Request failed with status ${response.status}`);
   }
@@ -83,6 +98,7 @@ function renderTickets(tickets) {
 }
 
 async function loadTickets() {
+  if (!canListTickets()) return;
   const query = elements.statusFilter.value ? `?status=${encodeURIComponent(elements.statusFilter.value)}` : '';
   try {
     renderTickets(await api(`/tickets${query}`));
@@ -129,7 +145,10 @@ async function createTicket(event) {
         priority: form.get('priority'),
       },
     });
-    showMessage(`Ticket #${ticket.id} created with priority ${LABELS[ticket.priority]}.`, 'success');
+    showMessage(
+      canListTickets() ? `Ticket #${ticket.id} created with priority ${LABELS[ticket.priority]}.` : `Ticket #${ticket.id} created.`,
+      'success',
+    );
     elements.form.reset();
     await loadTickets();
   } catch (error) {
@@ -164,11 +183,28 @@ async function suggestReply(ticketId, button, output) {
   }
 }
 
-async function init() {
-  try {
-    const [health, tenants] = await Promise.all([api('/health'), api('/tenants')]);
-    state.demoDefects = health.demo_defects === true;
+function showLogin() {
+  state.user = null;
+  elements.appView.hidden = true;
+  elements.loginView.hidden = false;
+  elements.loginForm.querySelector('[name="username"]').focus();
+  document.body.dataset.ready = 'true';
+}
 
+async function startPanel(user) {
+  state.user = user;
+  elements.loginView.hidden = true;
+  elements.appView.hidden = false;
+  elements.currentUser.textContent = `${user.username} (${user.role})`;
+  if (!canListTickets()) {
+    // Support only creates tickets, so the list is removed, not just hidden.
+    elements.ticketsPanel.remove();
+    elements.layout.classList.add('single');
+  }
+
+  try {
+    const tenants = await api('/tenants');
+    elements.tenantSelect.replaceChildren();
     for (const tenant of tenants) {
       elements.tenantSelect.append(new Option(tenant.name, tenant.id));
     }
@@ -183,12 +219,59 @@ async function init() {
     await selectTenant(initial);
   } catch (error) {
     showMessage(`Could not load MultiDesk: ${error.message}`, 'error');
+  } finally {
+    document.body.dataset.ready = 'true';
   }
+}
 
+async function login(event) {
+  event.preventDefault();
+  const form = new FormData(elements.loginForm);
+  elements.loginSubmit.disabled = true;
+  elements.loginError.textContent = '';
+  try {
+    const user = await api('/login', {
+      method: 'POST',
+      body: { username: form.get('username'), password: form.get('password') },
+    });
+    elements.loginForm.reset();
+    document.body.dataset.ready = 'false';
+    await startPanel(user);
+  } catch (error) {
+    elements.loginError.textContent = error.message;
+  } finally {
+    elements.loginSubmit.disabled = false;
+  }
+}
+
+async function logout() {
+  await api('/logout', { method: 'POST' }).catch(() => {});
+  // A fresh page load clears every bit of the previous user's state.
+  window.location.reload();
+}
+
+async function init() {
+  elements.loginForm.addEventListener('submit', login);
+  elements.logoutButton.addEventListener('click', logout);
   elements.tenantSelect.addEventListener('change', () => selectTenant(elements.tenantSelect.value));
   elements.statusFilter.addEventListener('change', loadTickets);
   elements.form.addEventListener('submit', createTicket);
-  document.body.dataset.ready = 'true';
+
+  try {
+    const health = await api('/health');
+    state.demoDefects = health.demo_defects === true;
+  } catch (error) {
+    showMessage(`Could not load MultiDesk: ${error.message}`, 'error');
+  }
+
+  let user;
+  try {
+    user = await api('/me');
+  } catch {
+    showLogin();
+    return;
+  }
+  await startPanel(user);
 }
 
 init();
