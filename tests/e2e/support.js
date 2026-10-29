@@ -1,9 +1,50 @@
 import { randomUUID } from 'node:crypto';
 import Database from 'better-sqlite3';
-import { expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import { E2E_DB_PATH } from '../../playwright.config.js';
+import { SEED_USERS } from '../../src/db/seed.js';
 
 export const TENANTS = ['acme', 'globex'];
+
+/** Development-only seed credentials (see README.md). */
+export const credentialsFor = (username) => {
+  const { password } = SEED_USERS.find((u) => u.username === username);
+  return { username, password };
+};
+
+/**
+ * Logs in through the API. The session cookie lands in the request context's cookie jar,
+ * so every later call on that context (or its page) sends it automatically.
+ */
+export async function login(request, username = 'admin') {
+  const response = await request.post('/api/login', { data: credentialsFor(username) });
+  expect(response.status(), `login as ${username}`).toBe(200);
+  return response;
+}
+
+/**
+ * Same as Playwright's test, but `page` and `request` start logged in as `loginAs` (admin by default).
+ * Use test.use({ loginAs: null }) for an anonymous visitor.
+ */
+export const test = base.extend({
+  loginAs: ['admin', { option: true }],
+  request: async ({ request, loginAs }, use) => {
+    if (loginAs) await login(request, loginAs);
+    await use(request);
+  },
+  page: async ({ page, loginAs }, use) => {
+    if (loginAs) await login(page.request, loginAs);
+    await use(page);
+  },
+});
+
+export { expect };
+
+export async function loginViaUi(page, { username, password }) {
+  await page.getByTestId('login-username').fill(username);
+  await page.getByTestId('login-password').fill(password);
+  await page.getByTestId('login-submit').click();
+}
 
 export const uniqueTitle = (label) => `${label} ${randomUUID().slice(0, 8)}`;
 

@@ -93,6 +93,14 @@ describe('qa-tools: apiRequest', () => {
     assert.ok(res.body.every((t) => t.tenant_id === 'acme'));
   });
 
+  it('calls the API as another seed user or with no session', async () => {
+    const support = await apiRequest(baseUrl, { path: '/api/tickets', tenant: 'acme', user: 'support1' });
+    assert.equal(support.status, 403);
+    const anonymous = await apiRequest(baseUrl, { path: '/api/tickets', tenant: 'acme', user: 'anonymous' });
+    assert.equal(anonymous.status, 401);
+    await assert.rejects(apiRequest(baseUrl, { path: '/api/tickets', user: 'ghost' }), /Unknown user/);
+  });
+
   it('rejects paths outside the API', async () => {
     await assert.rejects(apiRequest(baseUrl, { path: '/index.html' }), /must start with \/api\//);
   });
