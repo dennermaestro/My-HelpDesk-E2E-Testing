@@ -8,53 +8,78 @@
     <script type="module" src="app.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <h1 class="brand">MultiDesk</h1>
-      <label class="tenant-picker">
-        <span>Client</span>
-        <select id="tenant-select" data-testid="tenant-select" aria-label="Client"></select>
-      </label>
-    </header>
-
-    <main class="layout">
-      <section class="panel" aria-labelledby="new-ticket-heading">
-        <h2 id="new-ticket-heading">New ticket</h2>
-        <form id="ticket-form" data-testid="ticket-form" novalidate>
+    <main id="login-view" class="login-view" data-testid="login-view" hidden>
+      <section class="panel login-panel" aria-labelledby="login-heading">
+        <h1 class="brand">MultiDesk</h1>
+        <h2 id="login-heading">Sign in</h2>
+        <form id="login-form" data-testid="login-form" novalidate>
           <label>
-            Title
-            <input name="title" data-testid="ticket-title" required minlength="3" maxlength="120" autocomplete="off" />
+            Username
+            <input name="username" data-testid="login-username" required autocomplete="username" autocapitalize="none" />
           </label>
           <label>
-            Customer name
-            <input name="customer_name" data-testid="ticket-customer" required minlength="2" maxlength="80" autocomplete="off" />
+            Password
+            <input name="password" type="password" data-testid="login-password" required autocomplete="current-password" />
           </label>
-          <label>
-            Priority
-            <select name="priority" data-testid="ticket-priority">
-              <option value="low">Low</option>
-              <option value="normal" selected>Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </label>
-          <button type="submit" data-testid="ticket-submit">Create ticket</button>
+          <button type="submit" data-testid="login-submit">Sign in</button>
         </form>
-        <p id="message" class="message" role="status" aria-live="polite" data-testid="message"></p>
-      </section>
-
-      <section class="panel" aria-labelledby="tickets-heading">
-        <div class="list-header">
-          <h2 id="tickets-heading">Tickets</h2>
-          <select id="status-filter" data-testid="status-filter" aria-label="Filter by status">
-            <option value="">All statuses</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In progress</option>
-            <option value="resolved">Resolved</option>
-          </select>
-        </div>
-        <ul id="ticket-list" class="ticket-list" data-testid="ticket-list"></ul>
+        <p id="login-error" class="message error" role="alert" data-testid="login-error"></p>
       </section>
     </main>
+
+    <div id="app-view" data-testid="app-view" hidden>
+      <header class="topbar">
+        <h1 class="brand">MultiDesk</h1>
+        <div class="topbar-actions">
+          <label class="tenant-picker">
+            <span>Client</span>
+            <select id="tenant-select" data-testid="tenant-select" aria-label="Client"></select>
+          </label>
+          <span class="current-user" data-testid="current-user"></span>
+          <button type="button" class="secondary" data-testid="logout-button">Log out</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel" aria-labelledby="new-ticket-heading">
+          <h2 id="new-ticket-heading">New ticket</h2>
+          <form id="ticket-form" data-testid="ticket-form" novalidate>
+            <label>
+              Title
+              <input name="title" data-testid="ticket-title" required minlength="3" maxlength="120" autocomplete="off" />
+            </label>
+            <label>
+              Customer name
+              <input name="customer_name" data-testid="ticket-customer" required minlength="2" maxlength="80" autocomplete="off" />
+            </label>
+            <label>
+              Priority
+              <select name="priority" data-testid="ticket-priority">
+                <option value="low">Low</option>
+                <option value="normal" selected>Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </label>
+            <button type="submit" data-testid="ticket-submit">Create ticket</button>
+          </form>
+          <p id="message" class="message" role="status" aria-live="polite" data-testid="message"></p>
+        </section>
+
+        <section class="panel" id="tickets-panel" aria-labelledby="tickets-heading">
+          <div class="list-header">
+            <h2 id="tickets-heading">Tickets</h2>
+            <select id="status-filter" data-testid="status-filter" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+          <ul id="ticket-list" class="ticket-list" data-testid="ticket-list"></ul>
+        </section>
+      </main>
+    </div>
 
     <template id="ticket-template">
       <li class="ticket" data-testid="ticket-item">
