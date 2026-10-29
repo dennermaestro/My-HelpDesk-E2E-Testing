@@ -18,6 +18,17 @@ npm start                         # http://localhost:3000
 
 The database is rebuilt from seed data on every start, so each run begins from the same state.
 
+### Logins (development only)
+
+Open http://localhost:3000 and sign in with one of the seed users. These passwords exist only for this local demo; the database stores scrypt hashes with a per-user salt, never the plaintext. They are defined in `src/db/seed.js` (`SEED_USERS`).
+
+| Username | Password | Role | Can do |
+| --- | --- | --- | --- |
+| `admin` | `admin-dev-2026` | admin | Everything: list, view, create, change status/priority, reply suggestions, every client |
+| `support1` | `support1-dev-2026` | support | Only create tickets (sees the form and the new ticket number, no list) |
+
+Both users can switch clients. Permissions are enforced by the API, not only hidden in the UI.
+
 | Command | What it does |
 | --- | --- |
 | `npm start` | Runs the app with correct behavior |
@@ -51,20 +62,23 @@ Claude Code ──► Playwright MCP ──► Browser ──► UI (public/)
 
 ## REST API
 
-Every ticket request names its client in the `X-Tenant` header (`acme` or `globex`).
+Every route except `/api/health` and `/api/login` needs a session: log in with `POST /api/login`, which sets an `HttpOnly`, `SameSite=Lax` cookie (`multidesk_session`). Sessions live in memory and end on logout or server restart. Every ticket request also names its client in the `X-Tenant` header (`acme` or `globex`).
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | Health check and defect mode |
+| `POST` | `/api/login` | Log in: `{ username, password }` → `{ username, role }` + session cookie |
+| `POST` | `/api/logout` | End the session |
+| `GET` | `/api/me` | The logged-in user: `{ username, role }` |
 | `GET` | `/api/tenants` | List clients |
 | `GET` | `/api/tenants/:id/settings` | Feature flags of the calling client |
-| `GET` | `/api/tickets?status=&priority=` | List the client's tickets |
-| `GET` | `/api/tickets/:id` | One ticket |
-| `POST` | `/api/tickets` | Create: `{ title, customer_name, priority? }` |
-| `PATCH` | `/api/tickets/:id` | Update: `{ priority?, status? }` |
-| `POST` | `/api/tickets/:id/suggest-reply` | AI reply suggestion (simulated) |
+| `GET` | `/api/tickets?status=&priority=` | List the client's tickets (admin) |
+| `GET` | `/api/tickets/:id` | One ticket (admin) |
+| `POST` | `/api/tickets` | Create: `{ title, customer_name, priority? }` (admin, support) |
+| `PATCH` | `/api/tickets/:id` | Update: `{ priority?, status? }` (admin) |
+| `POST` | `/api/tickets/:id/suggest-reply` | AI reply suggestion, simulated (admin) |
 
-Errors always look like `{ "error": { "code", "message", "details?" } }`: `400` invalid input, `401` missing or unknown tenant, `403` another client's settings, `404` not found, `413` body too large.
+Errors always look like `{ "error": { "code", "message", "details?" } }`: `400` invalid input, `401` not logged in (`AUTH_REQUIRED`), wrong login (`INVALID_CREDENTIALS`) or missing/unknown tenant, `403` role not allowed or another client's settings, `404` not found, `413` body too large.
 
 ## Database
 
@@ -73,6 +87,7 @@ Errors always look like `{ "error": { "code", "message", "details?" } }`: `400` 
 | `tenants` | `id`, `name`, `plan` |
 | `tenant_settings` | `tenant_id`, `key`, `enabled` |
 | `tickets` | `id`, `tenant_id`, `title`, `customer_name`, `priority`, `status`, `created_at`, `updated_at` |
+| `users` | `id`, `username`, `role` (`admin`/`support`), `password_salt`, `password_hash` |
 
 Seed data lives in `src/db/seed.js`.
 
@@ -82,7 +97,7 @@ The harness is versioned in the repo, so anyone who opens it in Claude Code gets
 
 - `.mcp.json` registers two servers:
   - **playwright**: drives the browser, in an isolated profile.
-  - **qa-tools** (`mcp/`): `api_request`, `db_query` (single read-only `SELECT`, read-only connection, 200-row cap) and `tenant_config`.
+  - **qa-tools** (`mcp/`): `api_request` (logs in as `admin` by default; pass `user: "support1"` or `"anonymous"` to test other roles), `db_query` (single read-only `SELECT`, read-only connection, 200-row cap) and `tenant_config`.
 - `CLAUDE.md` holds the QA rules: every tenant, three layers, never write to the DB, evidence, regression test.
 - `/qa-check`: a risk-based check of the latest change across every tenant.
 - `/eval-reply`: evaluates the AI assistant over N runs against the rubric.
