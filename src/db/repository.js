@@ -1,5 +1,5 @@
 /**
- * Data access for tenants, settings and tickets.
+ * Data access for tenants, settings, tickets and users.
  * Every ticket query is scoped by tenant, so one client can never read another client's data.
  */
 export function createRepository(db) {
@@ -9,6 +9,7 @@ export function createRepository(db) {
     listSettings: db.prepare('SELECT key, enabled FROM tenant_settings WHERE tenant_id = ? ORDER BY key'),
     findSetting: db.prepare('SELECT enabled FROM tenant_settings WHERE tenant_id = ? AND key = ?'),
     findTicket: db.prepare('SELECT * FROM tickets WHERE tenant_id = ? AND id = ?'),
+    findUser: db.prepare('SELECT username, role, password_salt AS salt, password_hash AS hash FROM users WHERE username = ?'),
     insertTicket: db.prepare(`
       INSERT INTO tickets (tenant_id, title, customer_name, priority, status, created_at, updated_at)
       VALUES (@tenant_id, @title, @customer_name, @priority, @status, @created_at, @updated_at)
@@ -47,6 +48,8 @@ export function createRepository(db) {
       const { lastInsertRowid } = statements.insertTicket.run(ticket);
       return statements.findTicket.get(ticket.tenant_id, lastInsertRowid);
     },
+
+    findUser: (username) => statements.findUser.get(username),
 
     updateTicket(ticket) {
       statements.updateTicket.run(ticket);

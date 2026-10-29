@@ -1,3 +1,5 @@
+import { hashPassword } from '../auth.js';
+
 // All names below are fictional and exist only for this demo.
 
 export const SEED_TENANTS = [
@@ -26,6 +28,12 @@ export const SEED_TICKETS = [
   { tenant_id: 'globex', title: 'Login page is blank on Safari', customer_name: 'Sophie Martin', priority: 'high', status: 'resolved' },
 ];
 
+// Development-only logins for this local demo (documented in README.md). Only scrypt hashes are stored.
+export const SEED_USERS = [
+  { username: 'admin', role: 'admin', password: 'admin-dev-2026' },
+  { username: 'support1', role: 'support', password: 'support1-dev-2026' },
+];
+
 const SEED_TIMESTAMP = '2026-10-01T09:00:00.000Z';
 
 export function seedDatabase(db) {
@@ -38,11 +46,18 @@ export function seedDatabase(db) {
     VALUES (@tenant_id, @title, @customer_name, @priority, @status, @created_at, @updated_at)
   `);
 
+  const insertUser = db.prepare(`
+    INSERT INTO users (username, role, password_salt, password_hash)
+    VALUES (@username, @role, @salt, @hash)
+  `);
+  const users = SEED_USERS.map(({ username, role, password }) => ({ username, role, ...hashPassword(password) }));
+
   db.transaction(() => {
     SEED_TENANTS.forEach((tenant) => insertTenant.run(tenant));
     SEED_SETTINGS.forEach((setting) => insertSetting.run(setting));
     SEED_TICKETS.forEach((ticket) =>
       insertTicket.run({ ...ticket, created_at: SEED_TIMESTAMP, updated_at: SEED_TIMESTAMP }),
     );
+    users.forEach((user) => insertUser.run(user));
   })();
 }
