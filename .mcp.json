@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.83", "--isolated", "--viewport-size", "1280,800"]
+    },
+    "qa-tools": {
+      "command": "node",
+      "args": ["mcp/qa-tools-server.js"],
+      "env": {
+        "MULTIDESK_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
