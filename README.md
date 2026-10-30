@@ -6,6 +6,15 @@ Multi-tenant helpdesk (JavaScript, REST API, SQLite) for AI-assisted QA: Claude 
 
 All data is fictional. Everything runs locally. No API keys are needed.
 
+## Videos
+
+| Video | Length | What it shows |
+| --- | --- | --- |
+| [Introduction](docs/videos/Introduce_myself.mp4) | 3:56 | Denner's self-introduction. Watch it before the demo. |
+| [MultiDesk demo](docs/videos/MultiDesk-demo-narrado-Subtitles_v2.m4v) | 4:59 | Narrated walkthrough: the app for each client, `/qa-check` finding the Globex urgent-priority bug across UI, API and database, the regression tests going red and green, and `/eval-reply` catching an invented refund policy. English subtitles can be turned on or off in the player (QuickTime: View › Subtitles). |
+
+GitHub may not play the files in the browser. If it shows **View raw**, click it to download and open the file locally.
+
 ## Quick start
 
 Requires **Node.js 22+** (`node -v`) and Google Chrome for the Playwright MCP.
@@ -124,5 +133,6 @@ mcp/            qa-tools MCP server and its tool logic
 scripts/        eval-replies.js
 tests/unit/     unit + API tests
 tests/e2e/      Playwright specs
+docs/videos/    introduction and narrated demo videos
 .claude/        Claude Code slash commands
 ```
